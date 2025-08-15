@@ -18,7 +18,10 @@ html, body {
   top: 0;
   z-index: 2;
 }
-#topbar .right { display: flex; gap: 8px; }
+#topbar .right { display: flex; gap: 8px; align-items: center; }
+#topbar .sep {
+  width: 1px; height: 24px; background: #e5e7eb; display: inline-block;
+}
 #topbar button {
   border: 1px solid #d1d5db;
   background: white;
@@ -27,6 +30,12 @@ html, body {
   cursor: pointer;
 }
 #topbar button:hover { background: #f8fafc; }
+#topbar .devices button {
+  border-radius: 999px; padding: 6px 10px;
+}
+#topbar .devices button.active {
+  background: #0f172a; color: white; border-color: #0f172a;
+}
 #editor { height: calc(100vh - 48px); }
 .modal-body { display: flex; flex-direction: column; gap: 12px; }
 .modal-body textarea {
@@ -82,4 +91,3 @@ html, body {
   border: 1px solid #e5e7eb;
   color: #334155;
 }
-.gjs-one-bg { background-color: #f8fafc; }

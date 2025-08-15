@@ -2,29 +2,23 @@
 (function () {
   const qs = (sel, el = document) => el.querySelector(sel);
   const params = new URLSearchParams(location.search);
-  const projectId = params.get('project') || 'demo-gh-pages-plus';
+  const projectId = params.get('project') || 'demo-gh-pages-plus-v2';
   const LS_KEY = `mjml-editor-project-${projectId}`;
 
-  // --- Allowed-children map (based on MJML docs and common usage) ---
-  // Notes:
-  // - We focus on body/layout components for editing. Head elements are out of scope in this UI.
-  // - Special nested components have dedicated children (eg. navbar-link, social-element, carousel-image).
+  // --- Allowed children (conservative MJML rules) ---
   const ALLOWED = {
     'mj-body': ['mj-section', 'mj-wrapper', 'mj-hero'],
-    'mj-wrapper': ['mj-section'], // Wrappers wrap sections
+    'mj-wrapper': ['mj-section'],
     'mj-section': ['mj-column', 'mj-group', 'mj-raw'],
     'mj-group': ['mj-column'],
-    // Column-level content
     'mj-column': [
       'mj-text','mj-image','mj-button','mj-divider','mj-spacer',
       'mj-social','mj-navbar','mj-table','mj-accordion','mj-carousel','mj-raw'
     ],
-    // Hero behaves like a section with a single column; treat as column-like for children
     'mj-hero': [
       'mj-text','mj-image','mj-button','mj-divider','mj-spacer',
       'mj-social','mj-navbar','mj-table','mj-accordion','mj-raw'
     ],
-    // Composite components (special children)
     'mj-navbar': ['mj-navbar-link'],
     'mj-social': ['mj-social-element'],
     'mj-accordion': ['mj-accordion-element'],
@@ -32,7 +26,6 @@
     'mj-carousel': ['mj-carousel-image']
   };
 
-  // Provide friendly names/descriptions in the menu
   const LABELS = {
     'mj-section': ['Section', 'Row container'],
     'mj-wrapper': ['Wrapper', 'Wrap multiple sections'],
@@ -58,12 +51,7 @@
     'mj-raw': ['Raw HTML', 'Unprocessed area'],
   };
 
-  // Helpers
   const getTag = (model) => model.get('tagName') || model.get('type') || '';
-  const canHaveChildren = (model) => {
-    const tag = getTag(model);
-    return Array.isArray(ALLOWED[tag]) && ALLOWED[tag].length > 0;
-  };
 
   const editor = grapesjs.init({
     container: '#editor',
@@ -82,9 +70,9 @@
     },
     deviceManager: {
       devices: [
-        { id: 'desktop', name: 'Desktop', width: '' },
-        { id: 'tablet', name: 'Tablet', width: '768px' },
-        { id: 'mobile', name: 'Mobile', width: '320px' },
+        { id: 'Desktop', name: 'Desktop', width: '' },
+        { id: 'Tablet',  name: 'Tablet',  width: '768px' },
+        { id: 'Mobile',  name: 'Mobile',  width: '320px' },
       ]
     },
     storageManager: {
@@ -94,27 +82,49 @@
       stepsBeforeSave: 3,
       options: { local: { key: LS_KEY } }
     },
-    assetManager: { upload: 0 }, // GitHub Pages: only URLs
+    assetManager: { upload: 0 }
   });
 
-  // ---------- Insert menu UI ----------
+  // Ensure Blocks panel is open (so drag&drop is obvious)
+  editor.on('load', () => {
+    const pn = editor.Panels;
+    const openBlocks = pn.getButton('views', 'open-blocks');
+    if (openBlocks) openBlocks.set('active', 1);
+  });
+
+  // Device buttons in topbar
+  const updateDeviceBtns = () => {
+    ['dev-desktop','dev-tablet','dev-mobile'].forEach(id => qs('#'+id).classList.remove('active'));
+    const curr = editor.getDevice();
+    if (curr === 'Desktop') qs('#dev-desktop').classList.add('active');
+    if (curr === 'Tablet') qs('#dev-tablet').classList.add('active');
+    if (curr === 'Mobile') qs('#dev-mobile').classList.add('active');
+  };
+  qs('#dev-desktop').addEventListener('click', () => { editor.setDevice('Desktop'); updateDeviceBtns(); });
+  qs('#dev-tablet').addEventListener('click',  () => { editor.setDevice('Tablet');  updateDeviceBtns(); });
+  qs('#dev-mobile').addEventListener('click',  () => { editor.setDevice('Mobile');  updateDeviceBtns(); });
+  editor.on('device:update', updateDeviceBtns);
+  updateDeviceBtns();
+
+  // Insert menu
   const openInsertMenu = (targetModel) => {
-    // Decide allowed items: if the selected can't have children,
-    // propose siblings based on parent; else propose children
+    if (!targetModel) {
+      alert('Select a component first.');
+      return;
+    }
     let baseModel = targetModel;
-    let forParent = false;
-    const tag = getTag(targetModel);
-    let items = ALLOWED[tag] || [];
+    let insertingInParent = false;
+    let items = ALLOWED[getTag(targetModel)] || [];
     if (!items.length) {
       const parent = targetModel.parent();
       if (parent) {
         baseModel = parent;
         items = ALLOWED[getTag(parent)] || [];
-        forParent = true;
+        insertingInParent = true;
       }
     }
     if (!items.length) {
-      editor.toast && editor.toast('No valid insertions here.');
+      alert('No valid insertions here.');
       return;
     }
 
@@ -122,19 +132,20 @@
     const tpl = qs('#tpl-insert-menu');
     const node = tpl.content.cloneNode(true);
     const title = node.querySelector('#insert-title');
-    const list = node.querySelector('#insert-list');
-    const closeBtn = node.querySelector('#insert-close');
-
+    const list  = node.querySelector('#insert-list');
+    const close = node.querySelector('#insert-close');
     title.textContent = `Insert into ${getTag(baseModel)}`;
-    list.innerHTML = '';
 
+    const LABEL = (t) => LABELS[t] || [t, ''];
+
+    list.innerHTML = '';
     items.forEach((type) => {
+      const [name, desc] = LABEL(type);
       const el = document.createElement('button');
       el.className = 'insert-item';
-      const [name, desc] = LABELS[type] || [type, ''];
       el.innerHTML = `<span><div class="name">${name}</div><div class="desc">${desc}</div></span><span class="badge">${type}</span>`;
       el.onclick = () => {
-        insertComponent(baseModel, type, targetModel, forParent);
+        insertComponent(baseModel, type, targetModel, insertingInParent);
         modal.close();
       };
       list.appendChild(el);
@@ -143,25 +154,22 @@
     modal.setTitle('Insert');
     modal.setContent(node);
     modal.open();
-    closeBtn.onclick = () => modal.close();
+    close.onclick = () => modal.close();
   };
 
-  // Insert logic with smart defaults
   const insertComponent = (baseModel, type, originalTarget, insertingInParent) => {
-    const addChild = (parent, childDef) => parent.append(childDef);
-
-    const create = (t) => ({ type: t }); // minimal by default
     let comp;
+    const append = (parent, child) => parent.append(child);
 
     switch (type) {
       case 'mj-section':
-        comp = baseModel.append({ type, components: [{ type: 'mj-column' }] });
+        comp = append(baseModel, { type, components: [{ type: 'mj-column' }] });
         break;
       case 'mj-wrapper':
-        comp = baseModel.append({ type, components: [{ type: 'mj-section', components: [{ type: 'mj-column' }] }] });
+        comp = append(baseModel, { type, components: [{ type: 'mj-section', components: [{ type: 'mj-column' }] }] });
         break;
       case 'mj-hero':
-        comp = baseModel.append({
+        comp = append(baseModel, {
           type,
           attributes: {
             'background-url': 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
@@ -172,16 +180,13 @@
         });
         break;
       case 'mj-group':
-        comp = baseModel.append({ type, components: [{ type: 'mj-column' }, { type: 'mj-column' }] });
+        comp = append(baseModel, { type, components: [{ type: 'mj-column' }, { type: 'mj-column' }] });
         break;
       case 'mj-navbar':
-        comp = baseModel.append({
-          type,
-          components: [{ type: 'mj-navbar-link', content: 'Home', attributes: { href: '#' } }]
-        });
+        comp = append(baseModel, { type, components: [{ type: 'mj-navbar-link', content: 'Home', attributes: { href: '#' } }] });
         break;
       case 'mj-social':
-        comp = baseModel.append({
+        comp = append(baseModel, {
           type,
           components: [
             { type: 'mj-social-element', attributes: { name: 'facebook', href: '#' } },
@@ -190,7 +195,7 @@
         });
         break;
       case 'mj-accordion':
-        comp = baseModel.append({
+        comp = append(baseModel, {
           type,
           components: [{
             type: 'mj-accordion-element',
@@ -202,7 +207,7 @@
         });
         break;
       case 'mj-carousel':
-        comp = baseModel.append({
+        comp = append(baseModel, {
           type,
           components: [
             { type: 'mj-carousel-image', attributes: { src: 'https://via.placeholder.com/600x300?text=Slide+1' } },
@@ -211,13 +216,13 @@
         });
         break;
       case 'mj-text':
-        comp = baseModel.append({ type, content: 'New text' });
+        comp = append(baseModel, { type, content: 'New text' });
         break;
       case 'mj-button':
-        comp = baseModel.append({ type, content: 'Click me', attributes: { href: '#' } });
+        comp = append(baseModel, { type, content: 'Click me', attributes: { href: '#' } });
         break;
       case 'mj-image':
-        comp = baseModel.append({ type, attributes: { src: 'https://via.placeholder.com/600x200' } });
+        comp = append(baseModel, { type, attributes: { src: 'https://via.placeholder.com/600x200' } });
         break;
       case 'mj-divider':
       case 'mj-spacer':
@@ -229,44 +234,35 @@
       case 'mj-accordion-text':
       case 'mj-carousel-image':
       case 'mj-raw':
-        comp = baseModel.append(create(type));
+        comp = append(baseModel, { type });
         break;
       case 'mj-column':
-        comp = baseModel.append({ type, components: [{ type: 'mj-text', content: 'Column' }] });
+        comp = append(baseModel, { type, components: [{ type: 'mj-text', content: 'Column' }] });
         break;
       default:
-        comp = baseModel.append(create(type));
-        break;
+        comp = append(baseModel, { type });
     }
 
-    // If we originally selected a leaf and we're inserting into parent, try to place after the original
     if (insertingInParent && comp && originalTarget) {
       try {
         const parent = originalTarget.parent();
-        const index = parent.components().indexOf(originalTarget);
         const coll = parent.components();
+        const idx  = coll.indexOf(originalTarget);
         coll.remove(comp, { silent: true });
-        coll.add(comp, { at: index + 1 });
-      } catch (e) {
-        // fall back to appended at end
-      }
+        coll.add(comp, { at: idx + 1 });
+      } catch (e) {}
     }
 
-    // Focus the new component
     if (comp && comp.select) editor.select(comp);
   };
 
-  // Add "+" toolbar button to all MJML components
+  // Add a "+" to the component toolbar and also a topbar fallback
   editor.on('component:selected', (model) => {
     const tb = model.get('toolbar') || [];
-    const hasInsert = tb.some((t) => t.command === 'mjml:open-insert');
-    if (!hasInsert) {
+    const exists = tb.some(t => t.command === 'mjml:open-insert');
+    if (!exists) {
       tb.push({
-        attributes: {
-          class: 'gjs-toolbar-item',
-          title: 'Insert (+)',
-          style: 'padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;'
-        },
+        attributes: { class: 'gjs-toolbar-item', title: 'Insert (+)' },
         label: '+',
         command: 'mjml:open-insert',
       });
@@ -275,11 +271,17 @@
   });
 
   editor.Commands.add('mjml:open-insert', {
-    run(ed, sender, opts) {
-      const model = ed.getSelected();
-      if (!model) return;
-      openInsertMenu(model);
+    run(ed) {
+      const m = ed.getSelected();
+      openInsertMenu(m);
     }
+  });
+
+  // Topbar fallback button
+  qs('#btn-insert').addEventListener('click', () => {
+    const sel = editor.getSelected();
+    if (!sel) return alert('Select a component first.');
+    openInsertMenu(sel);
   });
 
   // ---------- Topbar actions ----------
@@ -289,21 +291,11 @@
       editor.Modal.close();
     }
   });
-
   qs('#btn-export-mjml').addEventListener('click', () => editor.runCommand('core:open-export'));
-
   qs('#btn-export-html').addEventListener('click', async () => {
     const html = editor.getHtml();
-    const css = editor.getCss();
-    const full = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>${css}</style>
-</head>
-<body>${html}</body>
-</html>`;
+    const css  = editor.getCss();
+    const full = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body>${html}</body></html>`;
     const blob = new Blob([full], { type: 'text/html' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -313,7 +305,6 @@
     a.remove();
     URL.revokeObjectURL(a.href);
   });
-
   qs('#btn-save').addEventListener('click', () => editor.store());
   qs('#btn-load').addEventListener('click', () => editor.load());
 

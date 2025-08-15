@@ -3,14 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MJML Email Editor (GitHub Pages + Insert Menu)</title>
-  <link rel="stylesheet" href="https://unpkg.com/grapesjs/dist/css/grapes.min.css" />
+  <title>MJML Email Editor (GH Pages + Insert)</title>
+  <!-- Pinned versions for stability -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.8/dist/css/grapes.min.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="topbar">
-    <div class="left"><strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert</span></div>
+    <div class="left">
+      <strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert</span>
+    </div>
     <div class="right">
+      <div class="devices">
+        <button id="dev-desktop" title="Desktop">Desktop</button>
+        <button id="dev-tablet"  title="Tablet">Tablet</button>
+        <button id="dev-mobile"  title="Mobile">Mobile</button>
+      </div>
+      <span class="sep"></span>
+      <button id="btn-insert"  title="Insert into selection">Insert +</button>
+      <span class="sep"></span>
       <button id="btn-new" title="Clear canvas">New</button>
       <button id="btn-import-mjml" title="Paste MJML to compile">Import MJML</button>
       <button id="btn-export-mjml" title="Get raw MJML">Export MJML</button>
@@ -43,10 +54,10 @@
     </div>
   </template>
 
-  <!-- Core libs via CDN -->
-  <script src="https://unpkg.com/grapesjs"></script>
-  <script src="https://unpkg.com/grapesjs-mjml"></script>
-  <script src="https://unpkg.com/mjml-browser/dist/mjml-browser.js"></script>
+  <!-- Pinned libs via jsDelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/grapesjs@0.21.8/dist/grapes.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/grapesjs-mjml@0.10.9/dist/grapesjs-mjml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mjml-browser@4.15.3/dist/mjml-browser.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
