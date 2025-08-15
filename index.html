@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MJML Email Editor (GitHub Pages + Insert Menu)</title>
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs/dist/css/grapes.min.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="topbar">
+    <div class="left"><strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert</span></div>
+    <div class="right">
+      <button id="btn-new" title="Clear canvas">New</button>
+      <button id="btn-import-mjml" title="Paste MJML to compile">Import MJML</button>
+      <button id="btn-export-mjml" title="Get raw MJML">Export MJML</button>
+      <button id="btn-export-html" title="Download compiled HTML">Export HTML</button>
+      <button id="btn-save" title="Save to localStorage">Save</button>
+      <button id="btn-load" title="Load from localStorage">Load</button>
+    </div>
+  </div>
+
+  <div id="editor"></div>
+
+  <template id="tpl-import-modal">
+    <div class="modal-body">
+      <p>Paste your MJML below. It will be compiled to HTML in the browser using <code>mjml-browser</code>.</p>
+      <textarea id="import-mjml-textarea" placeholder="<mjml>...</mjml>" rows="12"></textarea>
+      <div class="modal-actions">
+        <button id="import-cancel">Cancel</button>
+        <button id="import-apply">Import</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-insert-menu">
+    <div class="insert-menu">
+      <div class="insert-menu-header">
+        <strong id="insert-title">Insert</strong>
+        <button id="insert-close" aria-label="Close">×</button>
+      </div>
+      <div class="insert-list" id="insert-list"></div>
+    </div>
+  </template>
+
+  <!-- Core libs via CDN -->
+  <script src="https://unpkg.com/grapesjs"></script>
+  <script src="https://unpkg.com/grapesjs-mjml"></script>
+  <script src="https://unpkg.com/mjml-browser/dist/mjml-browser.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
