@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MJML Email Editor (GH Pages + Insert v4)</title>
+  <title>MJML Email Editor (GH Pages + Insert v5)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.8/dist/css/grapes.min.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="topbar">
     <div class="left">
-      <strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert v4</span>
+      <strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert v5</span>
     </div>
     <div class="right">
       <div class="devices">
@@ -30,7 +30,19 @@
     </div>
   </div>
 
-  <div id="editor"></div>
+  <!-- IMPORTANT: Provide initial MJML so GrapesJS-MJML has a valid droppable root -->
+  <div id="gjs">
+    <mjml>
+      <mj-body>
+        <mj-section>
+          <mj-column>
+            <mj-text align="center" font-size="22px" font-weight="700">Welcome</mj-text>
+            <mj-text>Drag blocks from the left or use <b>Insert +</b>.</mj-text>
+          </mj-column>
+        </mj-section>
+      </mj-body>
+    </mjml>
+  </div>
 
   <template id="tpl-import-modal">
     <div class="modal-body">
@@ -53,10 +65,33 @@
     </div>
   </template>
 
+  <!-- Core libs -->
   <script src="https://cdn.jsdelivr.net/npm/grapesjs@0.21.8/dist/grapes.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdn.jsdelivr.net/npm/grapesjs-mjml@1.0.7/dist/index.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <!-- Swap to jsDelivr min build to avoid CORB on some networks -->
-  <script src="https://cdn.jsdelivr.net/npm/mjml-browser@4.15.3/dist/mjml-browser.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Dynamic loader: try UNPKG first, fallback to jsDelivr (correct lib/index.js path) -->
+  <script>
+    (function loadMjmlBrowser() {
+      function add(src, onload, onerror) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.crossOrigin = 'anonymous';
+        s.referrerPolicy = 'no-referrer';
+        s.onload = onload;
+        s.onerror = onerror;
+        document.head.appendChild(s);
+      }
+      // If already present, skip
+      if (window.mjml) return;
+      add('https://unpkg.com/mjml-browser@4.15.3/lib/index.js', function(){}, function(){
+        add('https://cdn.jsdelivr.net/npm/mjml-browser@4.15.3/lib/index.js', function(){}, function(){
+          console.warn('[init] Failed to load mjml-browser from both CDNs; Import will be disabled.');
+        });
+      });
+    })();
+  </script>
+
   <script src="./app.js"></script>
 </body>
 </html>

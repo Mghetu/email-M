@@ -30,7 +30,7 @@ html, body {
 #topbar button:hover { background: #f8fafc; }
 #topbar .devices button { border-radius: 999px; padding: 6px 10px; }
 #topbar .devices button.active { background: #0f172a; color: white; border-color: #0f172a; }
-#editor { height: calc(100vh - 48px); }
+#editor, #gjs { height: calc(100vh - 48px); }
 .modal-body { display: flex; flex-direction: column; gap: 12px; }
 .modal-body textarea {
   width: 100%;

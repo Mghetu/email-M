@@ -2,15 +2,10 @@
 (function () {
   const qs = (sel, el = document) => el.querySelector(sel);
   const params = new URLSearchParams(location.search);
-  const projectId = params.get('project') || 'demo-gh-pages-plus-v4';
+  const projectId = params.get('project') || 'demo-gh-pages-plus-v5';
   const LS_KEY = `mjml-editor-project-${projectId}`;
 
-  const mjmlPluginFn =
-    window.grapesjsMJML ||
-    window['grapesjs-mjml'] ||
-    (window.grapesjs?.plugins?.get && window.grapesjs.plugins.get('grapesjs-mjml')) ||
-    null;
-
+  // Allowed children map
   const ALLOWED = {
     'mj-body': ['mj-section', 'mj-wrapper', 'mj-hero'],
     'mj-wrapper': ['mj-section'],
@@ -56,19 +51,21 @@
   };
   const getTag = (model) => model.get('tagName') || model.get('type') || '';
 
-  const pluginsArr = mjmlPluginFn ? [mjmlPluginFn] : ['grapesjs-mjml'];
-  const pluginsOpts = mjmlPluginFn
-    ? { [mjmlPluginFn]: { resetDevices: true, resetStyleManager: true, overwriteExport: true, columnsPadding: '10px 0',
-        importPlaceholder: '<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>' } }
-    : { 'grapesjs-mjml': { resetDevices: true, resetStyleManager: true, overwriteExport: true, columnsPadding: '10px 0',
-        importPlaceholder: '<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>' } };
-
   const editor = grapesjs.init({
-    container: '#editor',
+    // KEY CHANGE: fromElement true + container '#gjs' with initial MJML
+    fromElement: true,
+    container: '#gjs',
     height: '100%',
-    fromElement: false,
-    plugins: pluginsArr,
-    pluginsOpts,
+    plugins: ['grapesjs-mjml'],
+    pluginsOpts: {
+      'grapesjs-mjml': {
+        resetDevices: true,
+        resetStyleManager: true,
+        overwriteExport: true,
+        columnsPadding: '10px 0',
+        // leave importPlaceholder for modal only
+      }
+    },
     deviceManager: {
       devices: [
         { id: 'Desktop', name: 'Desktop', width: '' },
@@ -86,26 +83,16 @@
     assetManager: { upload: 0 }
   });
 
-  // Seed a valid MJML body if empty to avoid "Invalid target position" on first drag
+  // Open blocks on load
   editor.on('load', () => {
-    const doc = editor.getComponents();
-    if (!doc.length) {
-      const body = editor.addComponents({
-        type: 'mj-section',
-        components: [{ type: 'mj-column', components: [{ type: 'mj-text', content: 'Start here' }] }]
-      });
-      editor.select(body);
-    }
-    // Open Blocks so dragging is obvious
-    const pn = editor.Panels;
-    const openBlocks = pn.getButton('views', 'open-blocks');
+    const openBlocks = editor.Panels.getButton('views', 'open-blocks');
     if (openBlocks) openBlocks.set('active', 1);
 
-    // Disable Import MJML if mjml-browser is blocked
+    // Disable Import button if mjml-browser missing
     if (typeof window.mjml !== 'function') {
       const btn = qs('#btn-import-mjml');
       btn.disabled = true;
-      btn.title = 'Import disabled (mjml-browser failed to load on this network)';
+      btn.title = 'Import disabled (mjml-browser failed to load)';
       console.warn('[init] mjml-browser not available; Import MJML disabled');
     }
   });
@@ -124,7 +111,7 @@
   editor.on('device:update', updateDeviceBtns);
   updateDeviceBtns();
 
-  // Insert menu
+  // Insert menu logic (filtered by ALLOWED)
   const openInsertMenu = (targetModel) => {
     if (!targetModel) return alert('Select a component first.');
     let baseModel = targetModel;
@@ -155,10 +142,7 @@
       const el = document.createElement('button');
       el.className = 'insert-item';
       el.innerHTML = `<span><div class="name">${name}</div><div class="desc">${desc}</div></span><span class="badge">${type}</span>`;
-      el.onclick = () => {
-        insertComponent(baseModel, type, targetModel, insertingInParent);
-        modal.close();
-      };
+      el.onclick = () => { insertComponent(baseModel, type, targetModel, insertingInParent); modal.close(); };
       list.appendChild(el);
     });
 
@@ -174,11 +158,9 @@
 
     switch (type) {
       case 'mj-section':
-        comp = append(baseModel, { type, components: [{ type: 'mj-column' }] });
-        break;
+        comp = append(baseModel, { type, components: [{ type: 'mj-column' }] }); break;
       case 'mj-wrapper':
-        comp = append(baseModel, { type, components: [{ type: 'mj-section', components: [{ type: 'mj-column' }] }] });
-        break;
+        comp = append(baseModel, { type, components: [{ type: 'mj-section', components: [{ type: 'mj-column' }] }] }); break;
       case 'mj-hero':
         comp = append(baseModel, {
           type,
@@ -188,14 +170,11 @@
             'background-height': '200px',
           },
           components: [{ type: 'mj-text', content: 'Your hero text' }]
-        });
-        break;
+        }); break;
       case 'mj-group':
-        comp = append(baseModel, { type, components: [{ type: 'mj-column' }, { type: 'mj-column' }] });
-        break;
+        comp = append(baseModel, { type, components: [{ type: 'mj-column' }, { type: 'mj-column' }] }); break;
       case 'mj-navbar':
-        comp = append(baseModel, { type, components: [{ type: 'mj-navbar-link', content: 'Home', attributes: { href: '#' } }] });
-        break;
+        comp = append(baseModel, { type, components: [{ type: 'mj-navbar-link', content: 'Home', attributes: { href: '#' } }] }); break;
       case 'mj-social':
         comp = append(baseModel, {
           type,
@@ -203,8 +182,7 @@
             { type: 'mj-social-element', attributes: { name: 'facebook', href: '#' } },
             { type: 'mj-social-element', attributes: { name: 'twitter', href: '#' } },
           ]
-        });
-        break;
+        }); break;
       case 'mj-accordion':
         comp = append(baseModel, {
           type,
@@ -215,8 +193,7 @@
               { type: 'mj-accordion-text', content: '<p>Accordion content</p>' },
             ]
           }]
-        });
-        break;
+        }); break;
       case 'mj-carousel':
         comp = append(baseModel, {
           type,
@@ -224,17 +201,10 @@
             { type: 'mj-carousel-image', attributes: { src: 'https://via.placeholder.com/600x300?text=Slide+1' } },
             { type: 'mj-carousel-image', attributes: { src: 'https://via.placeholder.com/600x300?text=Slide+2' } },
           ]
-        });
-        break;
-      case 'mj-text':
-        comp = append(baseModel, { type, content: 'New text' });
-        break;
-      case 'mj-button':
-        comp = append(baseModel, { type, content: 'Click me', attributes: { href: '#' } });
-        break;
-      case 'mj-image':
-        comp = append(baseModel, { type, attributes: { src: 'https://via.placeholder.com/600x200' } });
-        break;
+        }); break;
+      case 'mj-text': comp = append(baseModel, { type, content: 'New text' }); break;
+      case 'mj-button': comp = append(baseModel, { type, content: 'Click me', attributes: { href: '#' } }); break;
+      case 'mj-image': comp = append(baseModel, { type, attributes: { src: 'https://via.placeholder.com/600x200' } }); break;
       case 'mj-divider':
       case 'mj-spacer':
       case 'mj-table':
@@ -245,11 +215,9 @@
       case 'mj-accordion-text':
       case 'mj-carousel-image':
       case 'mj-raw':
-        comp = append(baseModel, { type });
-        break;
+        comp = append(baseModel, { type }); break;
       case 'mj-column':
-        comp = append(baseModel, { type, components: [{ type: 'mj-text', content: 'Column' }] });
-        break;
+        comp = append(baseModel, { type, components: [{ type: 'mj-text', content: 'Column' }] }); break;
       default:
         comp = append(baseModel, { type });
     }
@@ -266,7 +234,7 @@
     if (comp && comp.select) editor.select(comp);
   };
 
-  // Inline "+" toolbar and topbar fallback
+  // Add inline "+" toolbar and topbar fallback
   editor.on('component:selected', (model) => {
     const tb = model.get('toolbar') || [];
     const exists = tb.some(t => t.command === 'mjml:open-insert');
@@ -286,6 +254,8 @@
   qs('#btn-new').addEventListener('click', () => {
     if (confirm('Clear the canvas?')) {
       editor.runCommand('core:canvas-clear');
+      // Re-seed to valid structure
+      editor.setComponents('<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>');
       editor.Modal.close();
     }
   });
@@ -306,7 +276,7 @@
   qs('#btn-save').addEventListener('click', () => editor.store());
   qs('#btn-load').addEventListener('click', () => editor.load());
 
-  // Import MJML (conditional)
+  // Import MJML (requires window.mjml loaded)
   const openImportModal = () => {
     if (typeof window.mjml !== 'function') return alert('Import disabled (mjml-browser failed to load).');
     const modal = editor.Modal;
@@ -323,10 +293,11 @@
       try {
         const mjmlStr = ta.value.trim();
         if (!mjmlStr) return;
+        // Use mjml-browser to compile then feed HTML or set raw MJML directly
         const out = mjml(mjmlStr, { minify: true });
         if (!out.html) throw new Error('Compile failed');
-        editor.DomComponents.clear();
-        editor.setComponents(out.html);
+        // Better: use raw MJML so the plugin keeps components proper
+        editor.setComponents(mjmlStr);
         modal.close();
       } catch (err) {
         alert(err.message || String(err));
