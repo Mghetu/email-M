@@ -3,15 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MJML Email Editor (GH Pages + Insert v3)</title>
-  <!-- Pinned versions for stability -->
-  <link rel="stylesheet" href="https://unpkg.com/grapesjs@0.21.8/dist/css/grapes.min.css" />
+  <title>MJML Email Editor (GH Pages + Insert v4)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.21.8/dist/css/grapes.min.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="topbar">
     <div class="left">
-      <strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert v3</span>
+      <strong>MJML Email Editor</strong> <span class="muted">/ GH Pages + Insert v4</span>
     </div>
     <div class="right">
       <div class="devices">
@@ -54,11 +53,10 @@
     </div>
   </template>
 
-  <!-- Pinned libs via unpkg -->
-  <script src="https://unpkg.com/grapesjs@0.21.8/dist/grapes.min.js"></script>
-  <!-- Use the official mjml plugin UMD build -->
-  <script src="https://unpkg.com/grapesjs-mjml@1.0.7/dist/index.js"></script>
-  <script src="https://unpkg.com/mjml-browser@4.15.3/dist/mjml-browser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/grapesjs@0.21.8/dist/grapes.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/grapesjs-mjml@1.0.7/dist/index.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Swap to jsDelivr min build to avoid CORB on some networks -->
+  <script src="https://cdn.jsdelivr.net/npm/mjml-browser@4.15.3/dist/mjml-browser.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="./app.js"></script>
 </body>
 </html>

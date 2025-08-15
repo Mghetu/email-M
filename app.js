@@ -2,19 +2,14 @@
 (function () {
   const qs = (sel, el = document) => el.querySelector(sel);
   const params = new URLSearchParams(location.search);
-  const projectId = params.get('project') || 'demo-gh-pages-plus-v3';
+  const projectId = params.get('project') || 'demo-gh-pages-plus-v4';
   const LS_KEY = `mjml-editor-project-${projectId}`;
 
-  // Ensure the MJML plugin reference resolves regardless of UMD/global name
   const mjmlPluginFn =
     window.grapesjsMJML ||
     window['grapesjs-mjml'] ||
-    (window.grapesjs && window.grapesjs.plugins && window.grapesjs.plugins.get && window.grapesjs.plugins.get('grapesjs-mjml')) ||
+    (window.grapesjs?.plugins?.get && window.grapesjs.plugins.get('grapesjs-mjml')) ||
     null;
-
-  if (!mjmlPluginFn) {
-    console.error('[init] grapesjs-mjml UMD not loaded. Check the <script> tag URL.');
-  }
 
   const ALLOWED = {
     'mj-body': ['mj-section', 'mj-wrapper', 'mj-hero'],
@@ -35,10 +30,9 @@
     'mj-accordion-element': ['mj-accordion-title','mj-accordion-text'],
     'mj-carousel': ['mj-carousel-image']
   };
-
   const LABELS = {
     'mj-section': ['Section', 'Row container'],
-    'mj-wrapper': ['Wrapper', 'Wrap multiple sections'],
+    'mj-wrapper': ['Wrapper', 'Wrap sections'],
     'mj-hero': ['Hero', 'Full-width hero'],
     'mj-group': ['Group', 'Row that prevents stacking'],
     'mj-column': ['Column', 'Place content inside'],
@@ -60,21 +54,14 @@
     'mj-carousel-image': ['Carousel image', 'Slide image'],
     'mj-raw': ['Raw HTML', 'Unprocessed area'],
   };
-
   const getTag = (model) => model.get('tagName') || model.get('type') || '';
 
   const pluginsArr = mjmlPluginFn ? [mjmlPluginFn] : ['grapesjs-mjml'];
   const pluginsOpts = mjmlPluginFn
-    ? { [mjmlPluginFn]: {
-        resetDevices: true, resetStyleManager: true, overwriteExport: true,
-        columnsPadding: '10px 0',
-        importPlaceholder: '<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>'
-      } }
-    : { 'grapesjs-mjml': {
-        resetDevices: true, resetStyleManager: true, overwriteExport: true,
-        columnsPadding: '10px 0',
-        importPlaceholder: '<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>'
-      }};
+    ? { [mjmlPluginFn]: { resetDevices: true, resetStyleManager: true, overwriteExport: true, columnsPadding: '10px 0',
+        importPlaceholder: '<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>' } }
+    : { 'grapesjs-mjml': { resetDevices: true, resetStyleManager: true, overwriteExport: true, columnsPadding: '10px 0',
+        importPlaceholder: '<mjml><mj-body><mj-section><mj-column><mj-text>Start here</mj-text></mj-column></mj-section></mj-body></mjml>' } };
 
   const editor = grapesjs.init({
     container: '#editor',
@@ -99,11 +86,28 @@
     assetManager: { upload: 0 }
   });
 
-  // Open Blocks panel on load
+  // Seed a valid MJML body if empty to avoid "Invalid target position" on first drag
   editor.on('load', () => {
+    const doc = editor.getComponents();
+    if (!doc.length) {
+      const body = editor.addComponents({
+        type: 'mj-section',
+        components: [{ type: 'mj-column', components: [{ type: 'mj-text', content: 'Start here' }] }]
+      });
+      editor.select(body);
+    }
+    // Open Blocks so dragging is obvious
     const pn = editor.Panels;
     const openBlocks = pn.getButton('views', 'open-blocks');
     if (openBlocks) openBlocks.set('active', 1);
+
+    // Disable Import MJML if mjml-browser is blocked
+    if (typeof window.mjml !== 'function') {
+      const btn = qs('#btn-import-mjml');
+      btn.disabled = true;
+      btn.title = 'Import disabled (mjml-browser failed to load on this network)';
+      console.warn('[init] mjml-browser not available; Import MJML disabled');
+    }
   });
 
   // Device buttons
@@ -123,15 +127,14 @@
   // Insert menu
   const openInsertMenu = (targetModel) => {
     if (!targetModel) return alert('Select a component first.');
-    const AL = ALLOWED;
     let baseModel = targetModel;
     let insertingInParent = false;
-    let items = AL[getTag(targetModel)] || [];
+    let items = ALLOWED[getTag(targetModel)] || [];
     if (!items.length) {
       const parent = targetModel.parent();
       if (parent) {
         baseModel = parent;
-        items = AL[getTag(parent)] || [];
+        items = ALLOWED[getTag(parent)] || [];
         insertingInParent = true;
       }
     }
@@ -260,7 +263,6 @@
         coll.add(comp, { at: idx + 1 });
       } catch (e) {}
     }
-
     if (comp && comp.select) editor.select(comp);
   };
 
@@ -269,19 +271,11 @@
     const tb = model.get('toolbar') || [];
     const exists = tb.some(t => t.command === 'mjml:open-insert');
     if (!exists) {
-      tb.push({
-        attributes: { class: 'gjs-toolbar-item', title: 'Insert (+)' },
-        label: '+',
-        command: 'mjml:open-insert',
-      });
+      tb.push({ attributes: { class: 'gjs-toolbar-item', title: 'Insert (+)' }, label: '+', command: 'mjml:open-insert' });
       model.set('toolbar', tb);
     }
   });
-
-  editor.Commands.add('mjml:open-insert', {
-    run(ed) { openInsertMenu(ed.getSelected()); }
-  });
-
+  editor.Commands.add('mjml:open-insert', { run(ed) { openInsertMenu(ed.getSelected()); } });
   qs('#btn-insert').addEventListener('click', () => {
     const sel = editor.getSelected();
     if (!sel) return alert('Select a component first.');
@@ -312,8 +306,9 @@
   qs('#btn-save').addEventListener('click', () => editor.store());
   qs('#btn-load').addEventListener('click', () => editor.load());
 
-  // Import MJML
+  // Import MJML (conditional)
   const openImportModal = () => {
+    if (typeof window.mjml !== 'function') return alert('Import disabled (mjml-browser failed to load).');
     const modal = editor.Modal;
     const tpl = qs('#tpl-import-modal');
     const node = tpl.content.cloneNode(true);
